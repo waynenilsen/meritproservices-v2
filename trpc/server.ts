@@ -6,6 +6,6 @@ import { appRouter } from "./routers/_app";
 const createCaller = createCallerFactory(appRouter);
 
 export const trpcServer = async () => {
-  const ctx = await createTRPCContext();
-  return createCaller(ctx);
+	const ctx = await createTRPCContext();
+	return createCaller(ctx);
 };
