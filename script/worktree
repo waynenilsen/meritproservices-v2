@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Conductor workspace bootstrap script
+# Uses CONDUCTOR_PORT to deconflict the Next.js dev server port across workspaces
+
+PORT="${CONDUCTOR_PORT:-3000}"
+
+echo "Setting up workspace: ${CONDUCTOR_WORKSPACE_NAME:-unknown} (port $PORT)"
+
+# Write .env.local with workspace-specific port
+cat > .env.local <<EOF
+PORT=$PORT
+EOF
+
+# Install dependencies
+bun install
+
+# Generate Prisma client
+bunx prisma generate
