@@ -13,6 +13,16 @@ cat > .env.local <<EOF
 PORT=$PORT
 EOF
 
+# Append local secrets if available
+SECRETS_FILE="$HOME/.secrets/meritproservices.env"
+if [[ -f "$SECRETS_FILE" ]]; then
+  echo "" >> .env.local
+  cat "$SECRETS_FILE" >> .env.local
+  echo "Loaded secrets from $SECRETS_FILE"
+else
+  echo "No secrets file found at $SECRETS_FILE (skipping)"
+fi
+
 # Install dependencies
 bun install
 
