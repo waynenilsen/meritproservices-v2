@@ -7,31 +7,19 @@ datasource db {
   provider = "sqlite"
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  name      String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  passkeys  Passkey[]
-  sessions  Session[]
-}
-
-model Passkey {
-  id              Int      @id @default(autoincrement())
-  credentialId    String   @unique
-  publicKey       Bytes
-  counter         BigInt   @default(0)
-  transports      String?
-  createdAt       DateTime @default(now())
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model Session {
-  id        String   @id
-  userId    Int
+  id        String    @id // cuid
+  email     String?
+  createdAt DateTime  @default(now())
   expiresAt DateTime
+}
+
+model MagicLink {
+  id        String   @id // cuid
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  sessionId String
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -1,10 +1,7 @@
-import { createTRPCRouter, publicProcedure } from "@/trpc/init";
+import { createTRPCRouter } from "@/trpc/init";
 import { authRouter } from "./auth";
 
 export const appRouter = createTRPCRouter({
-	time: publicProcedure.query(() => {
-		return { serverTime: new Date() };
-	}),
 	auth: authRouter,
 });
 
