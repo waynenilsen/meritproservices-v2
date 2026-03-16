@@ -74,15 +74,20 @@ If the branch already has a remote, just `git push`.
 
 ### Step 6: Merge to main
 
-Use GitHub CLI to merge. Prefer squash merge:
+Use GitHub CLI to merge. Prefer squash merge.
+
+**Important**: In Conductor worktrees, `main` is checked out in another worktree. After `gh pr merge`, gh tries to switch to main locally and fails with `fatal: 'main' is already checked out`. The merge itself succeeds via the GitHub API — this is only a local git error. Check the output: if it says "was already merged" or "Merged", the merge succeeded. Only treat it as a real failure if the PR was NOT merged.
 
 ```bash
 # Create PR if one doesn't exist
 gh pr create --fill 2>/dev/null || true
 
 # Merge the PR (squash merge preferred)
+# The command may exit non-zero due to the local worktree issue even though the merge succeeded.
 gh pr merge --squash --delete-branch
 ```
+
+If `gh pr merge` exits non-zero, check `gh pr view --json state -q .state` — if it returns `MERGED`, the merge worked and the error is safe to ignore.
 
 ### Step 7: Confirm
 
