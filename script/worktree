@@ -23,8 +23,9 @@ else
   echo "No secrets file found at $SECRETS_FILE (skipping)"
 fi
 
-# Install dependencies
+# Install dependencies and build native modules (better-sqlite3 needs node-gyp)
 bun install
+npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
 
 # Generate Prisma client
 bunx prisma generate
