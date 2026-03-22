@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
+const manrope = Manrope({
+	variable: "--font-sans",
 	subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
-});
-
-const bricolage = Bricolage_Grotesque({
+const fraunces = Fraunces({
 	variable: "--font-display",
 	subsets: ["latin"],
-	weight: ["400", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -33,7 +27,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="en"
-			className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+			className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}
 		>
 			<body className="min-h-full flex flex-col bg-[#FAF9F6] text-[#2C2C2C] font-sans">
 				<Providers>{children}</Providers>
