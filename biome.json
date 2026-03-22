@@ -18,6 +18,14 @@
 			"recommended": true
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["components/ui/**"],
+			"linter": {
+				"enabled": false
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
