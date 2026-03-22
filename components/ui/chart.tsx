@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import * as RechartsPrimitive from "recharts";
 import type { TooltipContentProps } from "recharts";
+import * as RechartsPrimitive from "recharts";
 import type {
 	LegendPayload,
 	VerticalAlignmentType,
