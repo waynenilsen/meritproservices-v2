@@ -9,5 +9,5 @@ bun install
 
 # Generate Prisma client, run migrations, and seed
 bunx prisma generate
-bunx prisma migrate dev --skip-seed
+bunx prisma migrate deploy
 bun run db:seed
