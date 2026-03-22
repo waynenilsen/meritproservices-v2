@@ -1,91 +1,160 @@
-"use client";
-
-import { trpc } from "@/lib/trpc";
-
-function statusBadge(status: string) {
-	const colors: Record<string, string> = {
-		active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-		completed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-		archived: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-	};
-	return (
-		<span
-			className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? colors.archived}`}
-		>
-			{status}
-		</span>
-	);
-}
+import { Phone, Shield, Shovel, TreeDeciduous } from "lucide-react";
 
 export default function Home() {
-	const hello = trpc.hello.useQuery();
-	const projects = trpc.projects.list.useQuery();
-
 	return (
-		<div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-			<main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-center gap-8 px-16 py-12 bg-white dark:bg-black">
-				<h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-					{hello.data?.greeting ?? "Loading..."}
-				</h1>
-				{hello.data?.serverTime && (
-					<p className="text-lg text-zinc-600 dark:text-zinc-400">
-						Server time: {hello.data.serverTime.toLocaleString()}
-					</p>
-				)}
-
-				<div className="w-full">
-					<h2 className="mb-4 text-xl font-semibold text-black dark:text-zinc-50">
-						Projects
-					</h2>
-					{projects.isLoading ? (
-						<p className="text-zinc-500">Loading projects...</p>
-					) : projects.data?.length === 0 ? (
-						<p className="text-zinc-500">No projects found.</p>
-					) : (
-						<div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-							<table className="w-full text-left text-sm">
-								<thead className="bg-zinc-50 dark:bg-zinc-900">
-									<tr>
-										<th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
-											Name
-										</th>
-										<th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
-											Description
-										</th>
-										<th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
-											Status
-										</th>
-										<th className="px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">
-											Created
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-									{projects.data?.map((project) => (
-										<tr
-											key={project.id}
-											className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-										>
-											<td className="px-4 py-3 font-medium text-black dark:text-zinc-100">
-												{project.name}
-											</td>
-											<td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-												{project.description ?? "—"}
-											</td>
-											<td className="px-4 py-3">
-												{statusBadge(project.status)}
-											</td>
-											<td className="px-4 py-3 text-zinc-500 dark:text-zinc-500">
-												{project.createdAt.toLocaleDateString()}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
+		<div className="flex flex-1 flex-col">
+			{/* Header */}
+			<header className="sticky top-0 z-10 border-b border-[#2A3C2A]/10 bg-[#FAF9F6]/95 backdrop-blur-sm">
+				<div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+					<div className="flex items-center gap-3">
+						<div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#2A3C2A]">
+							<TreeDeciduous className="h-4 w-4 text-[#D4A843]" />
 						</div>
-					)}
+						<span className="font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-[#2A3C2A]">
+							Merit Pro Services
+						</span>
+					</div>
+					<a
+						href="tel:6033331505"
+						className="flex items-center gap-2 rounded-full bg-[#2A3C2A] px-4 py-2 text-sm font-semibold text-[#FAF9F6] transition-colors hover:bg-[#3D5A3D]"
+					>
+						<Phone className="h-3.5 w-3.5" />
+						(603) 333-1505
+					</a>
 				</div>
-			</main>
+			</header>
+
+			{/* Hero */}
+			<section className="relative overflow-hidden bg-[#2A3C2A]">
+				{/* Subtle texture overlay */}
+				<div
+					className="absolute inset-0 opacity-[0.03]"
+					style={{
+						backgroundImage:
+							"url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Ccircle cx='1' cy='1' r='1'/%3E%3C/g%3E%3C/svg%3E\")",
+					}}
+				/>
+				<div className="relative mx-auto max-w-5xl px-6 py-24 sm:py-32">
+					<p className="font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-[0.2em] text-[#D4A843]">
+						New Hampshire
+					</p>
+					<h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl font-extrabold leading-[1.05] tracking-tight text-[#FAF9F6] sm:text-7xl">
+						We Grind
+						<br />
+						Stumps.
+					</h1>
+					<p className="mt-6 max-w-md text-lg leading-relaxed text-[#FAF9F6]/70">
+						Clean removal. Chips raked back in. No mess left behind.
+					</p>
+					<div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+						<a
+							href="tel:6033331505"
+							className="inline-flex items-center justify-center gap-2 rounded-md bg-[#D4A843] px-6 py-3 text-sm font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955]"
+						>
+							<Phone className="h-4 w-4" />
+							Call for a Free Quote
+						</a>
+						<span className="text-sm text-[#FAF9F6]/50">
+							Free on-site estimates
+						</span>
+					</div>
+				</div>
+			</section>
+
+			{/* How It Works */}
+			<section className="mx-auto w-full max-w-5xl px-6 py-20 sm:py-28">
+				<p className="font-[family-name:var(--font-display)] text-xs font-bold uppercase tracking-[0.2em] text-[#D4A843]">
+					The Process
+				</p>
+				<h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-[#2A3C2A] sm:text-4xl">
+					Three Simple Steps
+				</h2>
+
+				<div className="mt-12 grid gap-8 sm:grid-cols-3">
+					{[
+						{
+							num: "01",
+							icon: TreeDeciduous,
+							title: "Measure & Quote",
+							desc: "We come out, measure your stumps, give you a final price, and mark the area for Dig Safe.",
+						},
+						{
+							num: "02",
+							icon: Shield,
+							title: "Dig Safe",
+							desc: "Dig Safe marks underground utilities — required by law before any grinding can begin.",
+						},
+						{
+							num: "03",
+							icon: Shovel,
+							title: "Grind & Clean",
+							desc: "We grind the stumps down and rake the wood chips back into the hole. Clean site when we leave.",
+						},
+					].map((step) => (
+						<div key={step.num} className="group relative">
+							<div className="flex items-start gap-4">
+								<span className="font-[family-name:var(--font-display)] text-4xl font-extrabold text-[#2A3C2A]/10">
+									{step.num}
+								</span>
+								<div className="pt-1">
+									<div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#2A3C2A]/5">
+										<step.icon className="h-5 w-5 text-[#2A3C2A]" />
+									</div>
+									<h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-[#2A3C2A]">
+										{step.title}
+									</h3>
+									<p className="mt-2 text-sm leading-relaxed text-[#6B6B60]">
+										{step.desc}
+									</p>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</section>
+
+			{/* Divider */}
+			<div className="mx-auto w-full max-w-5xl px-6">
+				<div className="h-px bg-[#2A3C2A]/10" />
+			</div>
+
+			{/* Landscaping partner */}
+			<section className="mx-auto w-full max-w-5xl px-6 py-20 sm:py-28">
+				<div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[#2A3C2A]">
+							Need Landscaping After?
+						</h2>
+						<p className="mt-2 max-w-md text-[#6B6B60]">
+							We work with a trusted landscaping partner and are happy to
+							connect you for any follow-up work on your yard.
+						</p>
+					</div>
+					<a
+						href="tel:6033331505"
+						className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-[#2A3C2A]/20 px-5 py-2.5 text-sm font-semibold text-[#2A3C2A] transition-colors hover:bg-[#2A3C2A]/5"
+					>
+						<Phone className="h-3.5 w-3.5" />
+						Ask Us About It
+					</a>
+				</div>
+			</section>
+
+			{/* Footer */}
+			<footer className="mt-auto border-t border-[#2A3C2A]/10 bg-[#2A3C2A]">
+				<div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:justify-between">
+					<div className="flex items-center gap-2 text-sm text-[#FAF9F6]/60">
+						<TreeDeciduous className="h-4 w-4 text-[#D4A843]" />
+						<span>&copy; {new Date().getFullYear()} Merit Pro Services</span>
+					</div>
+					<a
+						href="tel:6033331505"
+						className="text-sm font-medium text-[#FAF9F6]/80 transition-colors hover:text-[#FAF9F6]"
+					>
+						(603) 333-1505
+					</a>
+				</div>
+			</footer>
 		</div>
 	);
 }
