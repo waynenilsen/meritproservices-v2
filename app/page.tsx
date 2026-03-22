@@ -1,6 +1,12 @@
 import { Phone, Shield, Shovel, TreeDeciduous } from "lucide-react";
+import { headers } from "next/headers";
+import { StumpCalculator } from "@/components/stump-calculator";
 
-export default function Home() {
+export default async function Home() {
+	const headersList = await headers();
+	const ua = headersList.get("user-agent") ?? "";
+	const isMobile =
+		/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 	return (
 		<div className="flex flex-1 flex-col">
 			{/* Header */}
@@ -35,28 +41,35 @@ export default function Home() {
 					}}
 				/>
 				<div className="relative mx-auto max-w-5xl px-6 py-24 sm:py-32">
-					<p className="font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-[0.2em] text-[#D4A843]">
-						New Hampshire
-					</p>
-					<h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl font-extrabold leading-[1.05] tracking-tight text-[#FAF9F6] sm:text-7xl">
-						We Grind
-						<br />
-						Stumps.
-					</h1>
-					<p className="mt-6 max-w-md text-lg leading-relaxed text-[#FAF9F6]/70">
-						Clean removal. Chips raked back in. No mess left behind.
-					</p>
-					<div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-						<a
-							href="tel:6033331505"
-							className="inline-flex items-center justify-center gap-2 rounded-md bg-[#D4A843] px-6 py-3 text-sm font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955]"
-						>
-							<Phone className="h-4 w-4" />
-							Call for a Free Quote
-						</a>
-						<span className="text-sm text-[#FAF9F6]/50">
-							Free on-site estimates
-						</span>
+					<div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center">
+						<div>
+							<p className="font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-[0.2em] text-[#D4A843]">
+								New Hampshire
+							</p>
+							<h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl font-extrabold leading-[1.05] tracking-tight text-[#FAF9F6] sm:text-7xl">
+								We Grind
+								<br />
+								Stumps.
+							</h1>
+							<p className="mt-6 max-w-md text-lg leading-relaxed text-[#FAF9F6]/70">
+								Clean removal. Chips raked back in. No mess left behind.
+							</p>
+							<div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+								<a
+									href="tel:6033331505"
+									className="inline-flex items-center justify-center gap-2 rounded-md bg-[#D4A843] px-6 py-3 text-sm font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955]"
+								>
+									<Phone className="h-4 w-4" />
+									Call for a Free Quote
+								</a>
+								<span className="text-sm text-[#FAF9F6]/50">
+									Free on-site estimates
+								</span>
+							</div>
+						</div>
+						<div>
+							<StumpCalculator isMobile={isMobile} />
+						</div>
 					</div>
 				</div>
 			</section>
