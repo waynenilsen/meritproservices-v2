@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { publicProcedure, router } from "../trpc";
 
 export const appRouter = router({
@@ -6,6 +7,13 @@ export const appRouter = router({
 			greeting: "Hello from tRPC!",
 			serverTime: new Date(),
 		};
+	}),
+	projects: router({
+		list: publicProcedure.query(() => {
+			return prisma.project.findMany({
+				orderBy: { createdAt: "desc" },
+			});
+		}),
 	}),
 });
 

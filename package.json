@@ -16,7 +16,8 @@
 		"bootstrap": "./scripts/bootstrap-workspace.sh",
 		"db:migrate": "prisma migrate dev",
 		"db:studio": "prisma studio",
-		"db:generate": "prisma generate"
+		"db:generate": "prisma generate",
+		"db:seed": "npx tsx prisma/seed.ts"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.3.0",

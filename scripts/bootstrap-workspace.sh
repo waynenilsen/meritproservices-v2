@@ -6,3 +6,8 @@ if [ -f ~/.meritproservices-v2.env ]; then
 fi
 
 bun install
+
+# Generate Prisma client, run migrations, and seed
+bunx prisma generate
+bunx prisma migrate dev --skip-seed
+bun run db:seed
