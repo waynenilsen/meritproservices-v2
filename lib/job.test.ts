@@ -9,13 +9,17 @@ import {
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/app/generated/prisma/client";
 import {
+	PER_HALF_FOOT_CENTS,
+	TRIP_FEE_CENTS,
 	addLineItem,
 	canTransition,
 	computeTotal,
 	createJob,
 	getJobWithDetails,
+	getOrCreateDraftJob,
 	removeLineItem,
 	transitionJob,
+	updateLineItem,
 	validTransitions,
 } from "./job";
 
@@ -94,6 +98,48 @@ describe("validTransitions", () => {
 		expect(validTransitions("draft")).toEqual(["estimate", "cancelled"]);
 		expect(validTransitions("closed")).toEqual([]);
 		expect(validTransitions("cancelled")).toEqual([]);
+	});
+});
+
+describe("getOrCreateDraftJob", () => {
+	test("creates customer, job, trip fee, and default stump on first call", async () => {
+		const job = await getOrCreateDraftJob(prisma, userId);
+
+		expect(job.status).toBe("draft");
+		expect(job.userId).toBe(userId);
+		expect(job.customer.userId).toBe(userId);
+		expect(job.lineItems).toHaveLength(2);
+
+		const tripFee = job.lineItems.find((li) => li.description === "Trip fee");
+		expect(tripFee?.unitPrice).toBe(TRIP_FEE_CENTS);
+		expect(tripFee?.quantity).toBe(1);
+		expect(tripFee?.amount).toBe(TRIP_FEE_CENTS);
+
+		const stump = job.lineItems.find(
+			(li) => li.description === "Stump grinding",
+		);
+		expect(stump?.unitPrice).toBe(PER_HALF_FOOT_CENTS);
+		expect(stump?.quantity).toBe(2);
+		expect(stump?.amount).toBe(PER_HALF_FOOT_CENTS * 2);
+	});
+
+	test("returns existing draft job on subsequent calls", async () => {
+		const first = await getOrCreateDraftJob(prisma, userId);
+		const second = await getOrCreateDraftJob(prisma, userId);
+		expect(second.id).toBe(first.id);
+	});
+
+	test("creates new job if existing one is no longer draft", async () => {
+		const first = await getOrCreateDraftJob(prisma, userId);
+		await transitionJob(prisma, {
+			jobId: first.id,
+			toStatus: "estimate",
+			userId,
+		});
+
+		const second = await getOrCreateDraftJob(prisma, userId);
+		expect(second.id).not.toBe(first.id);
+		expect(second.status).toBe("draft");
 	});
 });
 
@@ -181,36 +227,63 @@ describe("transitionJob", () => {
 	});
 });
 
-describe("addLineItem / removeLineItem", () => {
+describe("addLineItem / updateLineItem / removeLineItem", () => {
 	test("adds line items with auto-incrementing sort order", async () => {
 		const job = await createJob(prisma, { customerId, userId });
 
 		const li1 = await addLineItem(prisma, {
 			jobId: job.id,
-			description: "Stump removal 24in",
-			unitPrice: 15000,
+			description: "Stump grinding",
+			quantity: 3,
+			unitPrice: PER_HALF_FOOT_CENTS,
 			userId,
 		});
 		const li2 = await addLineItem(prisma, {
 			jobId: job.id,
-			description: "Root grinding",
-			quantity: 2,
-			unitPrice: 5000,
+			description: "Stump grinding",
+			quantity: 4,
+			unitPrice: PER_HALF_FOOT_CENTS,
 			userId,
 		});
 
 		expect(li1.sortOrder).toBe(0);
-		expect(li1.amount).toBe(15000);
+		expect(li1.amount).toBe(PER_HALF_FOOT_CENTS * 3);
 		expect(li2.sortOrder).toBe(1);
-		expect(li2.amount).toBe(10000);
+		expect(li2.amount).toBe(PER_HALF_FOOT_CENTS * 4);
+	});
+
+	test("updates quantity and recalculates amount", async () => {
+		const job = await createJob(prisma, { customerId, userId });
+		const li = await addLineItem(prisma, {
+			jobId: job.id,
+			description: "Stump grinding",
+			quantity: 2,
+			unitPrice: PER_HALF_FOOT_CENTS,
+			userId,
+		});
+
+		const updated = await updateLineItem(prisma, {
+			lineItemId: li.id,
+			quantity: 5,
+			userId,
+		});
+
+		expect(updated.quantity).toBe(5);
+		expect(updated.amount).toBe(PER_HALF_FOOT_CENTS * 5);
+
+		const details = await getJobWithDetails(prisma, job.id);
+		const activity = details.activities.find(
+			(a) => a.action === "line_item_updated",
+		);
+		expect(activity?.detail).toBe("Stump grinding: qty 2 → 5");
 	});
 
 	test("removes a line item and logs activity", async () => {
 		const job = await createJob(prisma, { customerId, userId });
 		const li = await addLineItem(prisma, {
 			jobId: job.id,
-			description: "Stump removal",
-			unitPrice: 15000,
+			description: "Stump grinding",
+			unitPrice: PER_HALF_FOOT_CENTS,
 			userId,
 		});
 
@@ -221,15 +294,15 @@ describe("addLineItem / removeLineItem", () => {
 		const removeActivity = details.activities.find(
 			(a) => a.action === "line_item_removed",
 		);
-		expect(removeActivity?.detail).toBe("Stump removal");
+		expect(removeActivity?.detail).toBe("Stump grinding");
 	});
 });
 
 describe("computeTotal", () => {
 	test("sums line item amounts in pennies", () => {
 		expect(
-			computeTotal([{ amount: 15000 }, { amount: 10000 }, { amount: 7500 }]),
-		).toBe(32500);
+			computeTotal([{ amount: 15000 }, { amount: 5000 }, { amount: 7500 }]),
+		).toBe(27500);
 	});
 
 	test("returns 0 for empty list", () => {

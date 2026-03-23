@@ -66,7 +66,7 @@ model LineItem {
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   description String
-  quantity    Float    @default(1)
+  quantity    Int      @default(1)
   unitPrice   Int
   amount      Int
   sortOrder   Int      @default(0)

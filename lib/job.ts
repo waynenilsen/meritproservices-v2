@@ -1,5 +1,8 @@
 import type { PrismaClient } from "@/app/generated/prisma/client";
 
+export const TRIP_FEE_CENTS = 15000;
+export const PER_HALF_FOOT_CENTS = 2500;
+
 export const JOB_STATUSES = [
 	"draft",
 	"estimate",
@@ -30,6 +33,66 @@ export function canTransition(from: JobStatus, to: JobStatus): boolean {
 
 export function validTransitions(from: JobStatus): JobStatus[] {
 	return TRANSITIONS[from] ?? [];
+}
+
+export async function getOrCreateDraftJob(
+	prisma: PrismaClient,
+	userId: string,
+) {
+	const existing = await prisma.job.findFirst({
+		where: { userId, status: "draft" },
+		include: {
+			customer: true,
+			lineItems: { orderBy: { sortOrder: "asc" } },
+		},
+	});
+
+	if (existing) return existing;
+
+	const customer = await prisma.customer.create({
+		data: { userId },
+	});
+
+	const job = await prisma.job.create({
+		data: {
+			customerId: customer.id,
+			userId,
+			status: "draft",
+		},
+	});
+
+	await prisma.jobActivity.create({
+		data: {
+			jobId: job.id,
+			action: "created",
+			toState: "draft",
+			userId,
+		},
+	});
+
+	await addLineItem(prisma, {
+		jobId: job.id,
+		description: "Trip fee",
+		quantity: 1,
+		unitPrice: TRIP_FEE_CENTS,
+		userId,
+	});
+
+	await addLineItem(prisma, {
+		jobId: job.id,
+		description: "Stump grinding",
+		quantity: 2,
+		unitPrice: PER_HALF_FOOT_CENTS,
+		userId,
+	});
+
+	return prisma.job.findUniqueOrThrow({
+		where: { id: job.id },
+		include: {
+			customer: true,
+			lineItems: { orderBy: { sortOrder: "asc" } },
+		},
+	});
 }
 
 export async function createJob(
@@ -106,7 +169,7 @@ export async function addLineItem(
 	},
 ) {
 	const quantity = opts.quantity ?? 1;
-	const amount = Math.round(quantity * opts.unitPrice);
+	const amount = quantity * opts.unitPrice;
 
 	const maxSort = await prisma.lineItem.aggregate({
 		where: { jobId: opts.jobId },
@@ -129,6 +192,37 @@ export async function addLineItem(
 			jobId: opts.jobId,
 			action: "line_item_added",
 			detail: opts.description,
+			userId: opts.userId,
+		},
+	});
+
+	return lineItem;
+}
+
+export async function updateLineItem(
+	prisma: PrismaClient,
+	opts: {
+		lineItemId: string;
+		quantity: number;
+		userId?: string;
+	},
+) {
+	const existing = await prisma.lineItem.findUniqueOrThrow({
+		where: { id: opts.lineItemId },
+	});
+
+	const amount = opts.quantity * existing.unitPrice;
+
+	const lineItem = await prisma.lineItem.update({
+		where: { id: opts.lineItemId },
+		data: { quantity: opts.quantity, amount },
+	});
+
+	await prisma.jobActivity.create({
+		data: {
+			jobId: lineItem.jobId,
+			action: "line_item_updated",
+			detail: `${existing.description}: qty ${existing.quantity} → ${opts.quantity}`,
 			userId: opts.userId,
 		},
 	});
