@@ -250,6 +250,48 @@ export async function removeLineItem(
 	return lineItem;
 }
 
+export async function submitEstimate(
+	prisma: PrismaClient,
+	opts: {
+		jobId: string;
+		userId: string;
+		name: string;
+		email: string;
+		phone: string;
+		address: string;
+	},
+) {
+	const job = await prisma.job.findUniqueOrThrow({
+		where: { id: opts.jobId },
+		include: { customer: true },
+	});
+
+	if (job.userId !== opts.userId) {
+		throw new Error("Forbidden");
+	}
+
+	if (job.status !== "draft") {
+		throw new Error("Job is not in draft status");
+	}
+
+	await prisma.customer.update({
+		where: { id: job.customerId },
+		data: {
+			name: opts.name,
+			email: opts.email,
+			phone: opts.phone,
+			address: opts.address,
+		},
+	});
+
+	return transitionJob(prisma, {
+		jobId: opts.jobId,
+		toStatus: "estimate",
+		userId: opts.userId,
+		detail: `Submitted by ${opts.name}`,
+	});
+}
+
 export async function getJobWithDetails(prisma: PrismaClient, jobId: string) {
 	return prisma.job.findUniqueOrThrow({
 		where: { id: jobId },

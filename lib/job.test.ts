@@ -9,15 +9,16 @@ import {
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/app/generated/prisma/client";
 import {
-	PER_HALF_FOOT_CENTS,
-	TRIP_FEE_CENTS,
 	addLineItem,
 	canTransition,
 	computeTotal,
 	createJob,
 	getJobWithDetails,
 	getOrCreateDraftJob,
+	PER_HALF_FOOT_CENTS,
 	removeLineItem,
+	submitEstimate,
+	TRIP_FEE_CENTS,
 	transitionJob,
 	updateLineItem,
 	validTransitions,
@@ -295,6 +296,84 @@ describe("addLineItem / updateLineItem / removeLineItem", () => {
 			(a) => a.action === "line_item_removed",
 		);
 		expect(removeActivity?.detail).toBe("Stump grinding");
+	});
+});
+
+describe("submitEstimate", () => {
+	test("updates customer info and transitions job to estimate", async () => {
+		const job = await getOrCreateDraftJob(prisma, userId);
+		const result = await submitEstimate(prisma, {
+			jobId: job.id,
+			userId,
+			name: "Jane Doe",
+			email: "jane@example.com",
+			phone: "603-555-1234",
+			address: "123 Main St, Concord NH",
+		});
+
+		expect(result.status).toBe("estimate");
+
+		const customer = await prisma.customer.findUniqueOrThrow({
+			where: { id: job.customerId },
+		});
+		expect(customer.name).toBe("Jane Doe");
+		expect(customer.email).toBe("jane@example.com");
+		expect(customer.phone).toBe("603-555-1234");
+		expect(customer.address).toBe("123 Main St, Concord NH");
+	});
+
+	test("rejects if job is not in draft status", async () => {
+		const job = await createJob(prisma, { customerId, userId });
+		await transitionJob(prisma, {
+			jobId: job.id,
+			toStatus: "estimate",
+			userId,
+		});
+
+		expect(
+			submitEstimate(prisma, {
+				jobId: job.id,
+				userId,
+				name: "Jane",
+				email: "jane@example.com",
+				phone: "603-555-1234",
+				address: "123 Main St",
+			}),
+		).rejects.toThrow("Job is not in draft status");
+	});
+
+	test("rejects if user does not own the job", async () => {
+		const job = await getOrCreateDraftJob(prisma, userId);
+		const otherUser = await prisma.user.create({ data: {} });
+
+		expect(
+			submitEstimate(prisma, {
+				jobId: job.id,
+				userId: otherUser.id,
+				name: "Jane",
+				email: "jane@example.com",
+				phone: "603-555-1234",
+				address: "123 Main St",
+			}),
+		).rejects.toThrow("Forbidden");
+	});
+
+	test("logs activity with submitter name", async () => {
+		const job = await getOrCreateDraftJob(prisma, userId);
+		await submitEstimate(prisma, {
+			jobId: job.id,
+			userId,
+			name: "Jane Doe",
+			email: "jane@example.com",
+			phone: "603-555-1234",
+			address: "123 Main St",
+		});
+
+		const details = await getJobWithDetails(prisma, job.id);
+		const transition = details.activities.find(
+			(a) => a.action === "status_change" && a.toState === "estimate",
+		);
+		expect(transition?.detail).toBe("Submitted by Jane Doe");
 	});
 });
 

@@ -4,6 +4,7 @@ import {
 	addLineItem,
 	getJobWithDetails,
 	removeLineItem,
+	submitEstimate,
 	updateLineItem,
 } from "@/lib/job";
 import { prisma } from "@/lib/prisma";
@@ -61,6 +62,28 @@ export const jobRouter = router({
 				lineItemId: input.lineItemId,
 				quantity: input.quantity,
 				userId: ctx.userId,
+			});
+		}),
+
+	submitEstimate: authedProcedure
+		.input(
+			z.object({
+				jobId: z.string(),
+				name: z.string().min(1),
+				email: z.string().email(),
+				phone: z.string().min(1),
+				address: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			await assertJobOwner(input.jobId, ctx.userId);
+			return submitEstimate(prisma, {
+				jobId: input.jobId,
+				userId: ctx.userId,
+				name: input.name,
+				email: input.email,
+				phone: input.phone,
+				address: input.address,
 			});
 		}),
 

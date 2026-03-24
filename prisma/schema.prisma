@@ -36,6 +36,7 @@ model Session {
 model Customer {
   id        String   @id @default(cuid())
   name      String?
+  email     String?
   phone     String?
   address   String?
   latitude  Float?

@@ -1,7 +1,8 @@
 "use client";
 
-import { Minus, Phone, Plus, Trash2 } from "lucide-react";
-import { PER_HALF_FOOT_CENTS, TRIP_FEE_CENTS, computeTotal } from "@/lib/job";
+import { ArrowRight, Check, Minus, Phone, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { computeTotal, PER_HALF_FOOT_CENTS, TRIP_FEE_CENTS } from "@/lib/job";
 import { trpc } from "@/lib/trpc";
 
 interface LineItemData {
@@ -16,6 +17,7 @@ interface LineItemData {
 interface StumpCalculatorProps {
 	jobId: string | null;
 	initialLineItems: LineItemData[];
+	initialStatus: string;
 }
 
 function formatDiameter(halfFeet: number) {
@@ -34,8 +36,16 @@ function centsToDisplay(cents: number) {
 export function StumpCalculator({
 	jobId,
 	initialLineItems,
+	initialStatus,
 }: StumpCalculatorProps) {
 	const utils = trpc.useUtils();
+	const [submitted, setSubmitted] = useState(initialStatus !== "draft");
+	const [formData, setFormData] = useState({
+		name: "",
+		email: "",
+		phone: "",
+		address: "",
+	});
 
 	const { data: jobData } = trpc.job.get.useQuery(
 		{ jobId: jobId ?? "" },
@@ -59,6 +69,12 @@ export function StumpCalculator({
 	});
 	const removeMutation = trpc.job.removeLineItem.useMutation({
 		onSuccess: invalidate,
+	});
+	const submitMutation = trpc.job.submitEstimate.useMutation({
+		onSuccess: () => {
+			invalidate();
+			setSubmitted(true);
+		},
 	});
 
 	function addStump() {
@@ -85,6 +101,42 @@ export function StumpCalculator({
 		updateMutation.mutate({ lineItemId, quantity: newQty });
 	}
 
+	function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (!jobId) return;
+		submitMutation.mutate({
+			jobId,
+			...formData,
+		});
+	}
+
+	if (submitted) {
+		return (
+			<div className="w-full">
+				<div className="flex flex-col items-center gap-4 rounded-2xl bg-[#1E2E1E] p-8 text-center">
+					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#D4A843]/20">
+						<Check className="h-7 w-7 text-[#D4A843]" />
+					</div>
+					<h3 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#FAF9F6]">
+						Estimate Submitted!
+					</h3>
+					<p className="max-w-sm text-sm leading-relaxed text-[#FAF9F6]/60">
+						Your {centsToDisplay(total)} estimate for{" "}
+						{`${stumps.length} stump${stumps.length !== 1 ? "s" : ""}`} has been
+						submitted. We&apos;ll be in touch shortly to schedule your visit.
+					</p>
+					<a
+						href="tel:6033331505"
+						className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#D4A843] transition-colors hover:text-[#E0B955]"
+					>
+						<Phone className="h-4 w-4" />
+						Or call us now: (603) 333-1505
+					</a>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="w-full">
 			{/* Stump list */}
@@ -94,14 +146,12 @@ export function StumpCalculator({
 						key={stump.id}
 						className="flex items-center gap-3 rounded-xl bg-[#1E2E1E] p-3 sm:p-4"
 					>
-						{/* Stump label */}
 						<div className="min-w-0 shrink-0">
 							<span className="text-xs font-semibold uppercase tracking-wider text-[#FAF9F6]/40">
 								Stump {index + 1}
 							</span>
 						</div>
 
-						{/* Diameter controls — big tap targets */}
 						<div className="flex items-center gap-1 sm:gap-2">
 							<button
 								type="button"
@@ -133,12 +183,10 @@ export function StumpCalculator({
 							</button>
 						</div>
 
-						{/* Per-stump cost */}
 						<span className="ml-auto font-[family-name:var(--font-display)] text-base font-bold text-[#FAF9F6]/60 sm:text-lg">
 							{centsToDisplay(stump.amount)}
 						</span>
 
-						{/* Remove button */}
 						{stumps.length > 1 && (
 							<button
 								type="button"
@@ -191,14 +239,72 @@ export function StumpCalculator({
 				</div>
 			</div>
 
-			{/* CTA */}
-			<a
-				href="tel:6033331505"
-				className="mt-6 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#D4A843] text-base font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955] active:bg-[#C49A3A] sm:h-12 sm:text-sm"
-			>
-				<Phone className="h-5 w-5 sm:h-4 sm:w-4" />
-				Call for Your Free Quote
-			</a>
+			{/* Contact form CTA */}
+			<form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
+				<div className="grid gap-3 sm:grid-cols-2">
+					<input
+						type="text"
+						placeholder="Your name"
+						required
+						value={formData.name}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, name: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="email"
+						placeholder="Email"
+						required
+						value={formData.email}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, email: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="tel"
+						placeholder="Phone number"
+						required
+						value={formData.phone}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, phone: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="text"
+						placeholder="Address"
+						required
+						value={formData.address}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, address: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+				</div>
+
+				<button
+					type="submit"
+					disabled={submitMutation.isPending || !jobId}
+					className="mt-1 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#D4A843] text-base font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955] active:bg-[#C49A3A] disabled:opacity-50 sm:h-12 sm:text-sm"
+				>
+					{submitMutation.isPending ? (
+						"Submitting..."
+					) : (
+						<>
+							Get My Free Estimate
+							<ArrowRight className="h-5 w-5 sm:h-4 sm:w-4" />
+						</>
+					)}
+				</button>
+
+				{submitMutation.isError && (
+					<p className="text-center text-sm text-red-400">
+						Something went wrong. Please try again.
+					</p>
+				)}
+			</form>
 
 			{/* Skip the calculator option */}
 			<div className="mt-5 rounded-xl border border-[#FAF9F6]/10 bg-[#FAF9F6]/[0.03] px-4 py-4">

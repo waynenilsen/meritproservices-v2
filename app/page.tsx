@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
 import { Phone, Shield, Shovel, TreeDeciduous } from "lucide-react";
+import { cookies } from "next/headers";
+import { StumpCalculator } from "@/components/stump-calculator";
 import { getOrCreateDraftJob } from "@/lib/job";
 import { prisma } from "@/lib/prisma";
-import { SESSION_COOKIE, getSessionById, isSessionValid } from "@/lib/session";
-import { StumpCalculator } from "@/components/stump-calculator";
+import { getSessionById, isSessionValid, SESSION_COOKIE } from "@/lib/session";
 
 async function getDraftJob() {
 	const cookieStore = await cookies();
@@ -79,9 +79,14 @@ export default async function Home() {
 								amount: li.amount,
 								sortOrder: li.sortOrder,
 							}))}
+							initialStatus={job.status}
 						/>
 					) : (
-						<StumpCalculator jobId={null} initialLineItems={[]} />
+						<StumpCalculator
+							jobId={null}
+							initialLineItems={[]}
+							initialStatus="draft"
+						/>
 					)}
 				</div>
 			</section>

@@ -1,7 +1,7 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { SESSION_COOKIE, getSessionById, isSessionValid } from "@/lib/session";
+import { getSessionById, isSessionValid, SESSION_COOKIE } from "@/lib/session";
 import { appRouter } from "@/server/routers/_app";
 import type { TRPCContext } from "@/server/trpc";
 
