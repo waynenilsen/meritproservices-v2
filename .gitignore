@@ -46,3 +46,8 @@ next-env.d.ts
 /app/generated/prisma
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
+
+# IDEs
+.idea/

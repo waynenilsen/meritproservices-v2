@@ -70,3 +70,10 @@ scripts/          # Shell scripts (bootstrap, etc.)
 - Colocate route-specific components within their route segment
 - Prefix private folders with `_` to opt out of routing
 - Use route groups `(name)` to organize routes without affecting URLs
+
+# Database / Prisma
+
+- **Always use `bunx prisma migrate dev`** to create migrations. Never write migration SQL by hand.
+- The local SQLite dev database is disposable — delete it freely if it blocks `migrate dev` (e.g. non-empty table warnings in non-interactive shells).
+- After deleting the DB, run `scripts/bootstrap` to re-seed.
+- Migration workflow: edit `schema.prisma` → delete `prisma/dev.db` if needed → `bunx prisma migrate dev --name <name>`

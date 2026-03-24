@@ -13,14 +13,16 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String        @id @default(cuid())
+  email        String?       @unique
   name         String?
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  passwordHash String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   sessions     Session[]
   customers    Customer[]
+  jobs         Job[]
+  activities   JobActivity[]
 }
 
 model Session {
@@ -33,7 +35,8 @@ model Session {
 
 model Customer {
   id        String   @id @default(cuid())
-  name      String
+  name      String?
+  email     String?
   phone     String?
   address   String?
   latitude  Float?
@@ -42,13 +45,45 @@ model Customer {
   user      User?    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  jobs      Job[]
 }
 
-model Project {
+model Job {
+  id         String        @id @default(cuid())
+  status     String        @default("draft")
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  note       String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  lineItems  LineItem[]
+  activities JobActivity[]
+}
+
+model LineItem {
   id          String   @id @default(cuid())
-  name        String
-  description String?
-  status      String   @default("active")
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Int
+  amount      Int
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model JobActivity {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  action    String
+  fromState String?
+  toState   String?
+  detail    String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }

@@ -1,43 +1,139 @@
 "use client";
 
-import { Minus, Phone, Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArrowRight, Check, Minus, Phone, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { computeTotal, PER_HALF_FOOT_CENTS, TRIP_FEE_CENTS } from "@/lib/job";
+import { trpc } from "@/lib/trpc";
 
-const BASE_FEE = 150;
-const PER_FOOT = 50;
-
-interface Stump {
-	id: number;
-	diameter: number;
+interface LineItemData {
+	id: string;
+	description: string;
+	quantity: number;
+	unitPrice: number;
+	amount: number;
+	sortOrder: number;
 }
 
-function formatFeet(value: number) {
-	const whole = Math.floor(value);
-	const hasHalf = value % 1 !== 0;
+interface StumpCalculatorProps {
+	jobId: string | null;
+	initialLineItems: LineItemData[];
+	initialStatus: string;
+}
+
+function formatDiameter(halfFeet: number) {
+	const feet = halfFeet / 2;
+	const whole = Math.floor(feet);
+	const hasHalf = feet % 1 !== 0;
 	if (whole === 0 && hasHalf) return "\u00BD";
 	if (hasHalf) return `${whole}\u00BD`;
 	return `${whole}`;
 }
 
-export function StumpCalculator() {
-	const nextId = useRef(1);
-	const [stumps, setStumps] = useState<Stump[]>([{ id: 0, diameter: 1 }]);
+function centsToDisplay(cents: number) {
+	return `$${Math.round(cents / 100)}`;
+}
 
-	const total =
-		BASE_FEE + stumps.reduce((sum, s) => sum + s.diameter * PER_FOOT, 0);
+export function StumpCalculator({
+	jobId,
+	initialLineItems,
+	initialStatus,
+}: StumpCalculatorProps) {
+	const utils = trpc.useUtils();
+	const [submitted, setSubmitted] = useState(initialStatus !== "draft");
+	const [formData, setFormData] = useState({
+		name: "",
+		email: "",
+		phone: "",
+		address: "",
+	});
+
+	const { data: jobData } = trpc.job.get.useQuery(
+		{ jobId: jobId ?? "" },
+		{ enabled: !!jobId },
+	);
+
+	const lineItems: LineItemData[] = jobData?.lineItems ?? initialLineItems;
+	const tripFee = lineItems.find((li) => li.description === "Trip fee");
+	const stumps = lineItems.filter((li) => li.description === "Stump grinding");
+	const total = computeTotal(lineItems);
+
+	const invalidate = () => {
+		if (jobId) utils.job.get.invalidate({ jobId });
+	};
+
+	const addMutation = trpc.job.addLineItem.useMutation({
+		onSuccess: invalidate,
+	});
+	const updateMutation = trpc.job.updateLineItem.useMutation({
+		onSuccess: invalidate,
+	});
+	const removeMutation = trpc.job.removeLineItem.useMutation({
+		onSuccess: invalidate,
+	});
+	const submitMutation = trpc.job.submitEstimate.useMutation({
+		onSuccess: () => {
+			invalidate();
+			setSubmitted(true);
+		},
+	});
 
 	function addStump() {
-		setStumps((prev) => [...prev, { id: nextId.current++, diameter: 1 }]);
+		if (!jobId) return;
+		addMutation.mutate({
+			jobId,
+			description: "Stump grinding",
+			quantity: 2,
+			unitPrice: PER_HALF_FOOT_CENTS,
+		});
 	}
 
-	function removeStump(id: number) {
-		setStumps((prev) => prev.filter((s) => s.id !== id));
+	function removeStump(lineItemId: string) {
+		removeMutation.mutate({ lineItemId });
 	}
 
-	function updateDiameter(id: number, value: number) {
-		const clamped = Math.max(0.5, Math.min(6, value));
-		setStumps((prev) =>
-			prev.map((s) => (s.id === id ? { ...s, diameter: clamped } : s)),
+	function updateDiameter(
+		lineItemId: string,
+		currentQty: number,
+		delta: number,
+	) {
+		const newQty = currentQty + delta;
+		if (newQty < 1 || newQty > 12) return;
+		updateMutation.mutate({ lineItemId, quantity: newQty });
+	}
+
+	function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (!jobId) return;
+		submitMutation.mutate({
+			jobId,
+			...formData,
+		});
+	}
+
+	if (submitted) {
+		return (
+			<div className="w-full">
+				<div className="flex flex-col items-center gap-4 rounded-2xl bg-[#1E2E1E] p-8 text-center">
+					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#D4A843]/20">
+						<Check className="h-7 w-7 text-[#D4A843]" />
+					</div>
+					<h3 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#FAF9F6]">
+						Estimate Submitted!
+					</h3>
+					<p className="max-w-sm text-sm leading-relaxed text-[#FAF9F6]/60">
+						Your {centsToDisplay(total)} estimate for{" "}
+						{`${stumps.length} stump${stumps.length !== 1 ? "s" : ""}`} has been
+						submitted. We&apos;ll be in touch shortly to schedule your visit.
+					</p>
+					<a
+						href="tel:6033331505"
+						className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#D4A843] transition-colors hover:text-[#E0B955]"
+					>
+						<Phone className="h-4 w-4" />
+						Or call us now: (603) 333-1505
+					</a>
+				</div>
+			</div>
 		);
 	}
 
@@ -50,20 +146,18 @@ export function StumpCalculator() {
 						key={stump.id}
 						className="flex items-center gap-3 rounded-xl bg-[#1E2E1E] p-3 sm:p-4"
 					>
-						{/* Stump label */}
 						<div className="min-w-0 shrink-0">
 							<span className="text-xs font-semibold uppercase tracking-wider text-[#FAF9F6]/40">
 								Stump {index + 1}
 							</span>
 						</div>
 
-						{/* Diameter controls — big tap targets */}
 						<div className="flex items-center gap-1 sm:gap-2">
 							<button
 								type="button"
 								className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#FAF9F6]/10 text-[#FAF9F6] transition-colors hover:bg-[#FAF9F6]/20 active:bg-[#FAF9F6]/25 disabled:opacity-30 sm:h-10 sm:w-10"
-								onClick={() => updateDiameter(stump.id, stump.diameter - 0.5)}
-								disabled={stump.diameter <= 0.5}
+								onClick={() => updateDiameter(stump.id, stump.quantity, -1)}
+								disabled={stump.quantity <= 1}
 								aria-label="Decrease diameter"
 							>
 								<Minus className="h-4 w-4" />
@@ -71,7 +165,7 @@ export function StumpCalculator() {
 
 							<div className="flex w-16 flex-col items-center justify-center sm:w-20">
 								<span className="font-[family-name:var(--font-display)] text-xl font-extrabold text-[#FAF9F6] sm:text-2xl">
-									{formatFeet(stump.diameter)}
+									{formatDiameter(stump.quantity)}
 								</span>
 								<span className="text-[10px] font-medium uppercase tracking-wider text-[#FAF9F6]/40 sm:text-xs">
 									feet
@@ -81,20 +175,18 @@ export function StumpCalculator() {
 							<button
 								type="button"
 								className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#FAF9F6]/10 text-[#FAF9F6] transition-colors hover:bg-[#FAF9F6]/20 active:bg-[#FAF9F6]/25 disabled:opacity-30 sm:h-10 sm:w-10"
-								onClick={() => updateDiameter(stump.id, stump.diameter + 0.5)}
-								disabled={stump.diameter >= 6}
+								onClick={() => updateDiameter(stump.id, stump.quantity, 1)}
+								disabled={stump.quantity >= 12}
 								aria-label="Increase diameter"
 							>
 								<Plus className="h-4 w-4" />
 							</button>
 						</div>
 
-						{/* Per-stump cost */}
 						<span className="ml-auto font-[family-name:var(--font-display)] text-base font-bold text-[#FAF9F6]/60 sm:text-lg">
-							${stump.diameter * PER_FOOT}
+							{centsToDisplay(stump.amount)}
 						</span>
 
-						{/* Remove button */}
 						{stumps.length > 1 && (
 							<button
 								type="button"
@@ -114,6 +206,7 @@ export function StumpCalculator() {
 				type="button"
 				className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#FAF9F6]/15 text-sm font-semibold text-[#FAF9F6]/50 transition-colors hover:border-[#FAF9F6]/30 hover:text-[#FAF9F6]/80 active:bg-[#FAF9F6]/5 sm:h-11"
 				onClick={addStump}
+				disabled={!jobId || addMutation.isPending}
 			>
 				<Plus className="h-4 w-4" />
 				Add another stump
@@ -123,14 +216,16 @@ export function StumpCalculator() {
 			<div className="mt-6 space-y-2">
 				<div className="flex items-center justify-between text-sm text-[#FAF9F6]/50">
 					<span>Trip fee</span>
-					<span className="font-medium">$150</span>
+					<span className="font-medium">
+						{centsToDisplay(tripFee?.amount ?? TRIP_FEE_CENTS)}
+					</span>
 				</div>
 				<div className="flex items-center justify-between text-sm text-[#FAF9F6]/50">
 					<span>
 						Grinding ({stumps.length} stump{stumps.length !== 1 ? "s" : ""})
 					</span>
 					<span className="font-medium">
-						${stumps.reduce((sum, s) => sum + s.diameter * PER_FOOT, 0)}
+						{centsToDisplay(computeTotal(stumps))}
 					</span>
 				</div>
 				<div className="h-px bg-[#FAF9F6]/10" />
@@ -139,19 +234,77 @@ export function StumpCalculator() {
 						Estimated Total
 					</span>
 					<span className="font-[family-name:var(--font-display)] text-4xl font-extrabold text-[#D4A843] sm:text-5xl">
-						${total}
+						{centsToDisplay(total)}
 					</span>
 				</div>
 			</div>
 
-			{/* CTA */}
-			<a
-				href="tel:6033331505"
-				className="mt-6 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#D4A843] text-base font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955] active:bg-[#C49A3A] sm:h-12 sm:text-sm"
-			>
-				<Phone className="h-5 w-5 sm:h-4 sm:w-4" />
-				Call for Your Free Quote
-			</a>
+			{/* Contact form CTA */}
+			<form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
+				<div className="grid gap-3 sm:grid-cols-2">
+					<input
+						type="text"
+						placeholder="Your name"
+						required
+						value={formData.name}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, name: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="email"
+						placeholder="Email"
+						required
+						value={formData.email}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, email: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="tel"
+						placeholder="Phone number"
+						required
+						value={formData.phone}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, phone: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+					<input
+						type="text"
+						placeholder="Address"
+						required
+						value={formData.address}
+						onChange={(e) =>
+							setFormData((d) => ({ ...d, address: e.target.value }))
+						}
+						className="h-12 rounded-xl bg-[#1E2E1E] px-4 text-sm text-[#FAF9F6] placeholder-[#FAF9F6]/30 outline-none ring-1 ring-[#FAF9F6]/10 transition-colors focus:ring-[#D4A843]/50 sm:h-11"
+					/>
+				</div>
+
+				<button
+					type="submit"
+					disabled={submitMutation.isPending || !jobId}
+					className="mt-1 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#D4A843] text-base font-bold text-[#2A3C2A] transition-colors hover:bg-[#E0B955] active:bg-[#C49A3A] disabled:opacity-50 sm:h-12 sm:text-sm"
+				>
+					{submitMutation.isPending ? (
+						"Submitting..."
+					) : (
+						<>
+							Get My Free Estimate
+							<ArrowRight className="h-5 w-5 sm:h-4 sm:w-4" />
+						</>
+					)}
+				</button>
+
+				{submitMutation.isError && (
+					<p className="text-center text-sm text-red-400">
+						Something went wrong. Please try again.
+					</p>
+				)}
+			</form>
 
 			{/* Skip the calculator option */}
 			<div className="mt-5 rounded-xl border border-[#FAF9F6]/10 bg-[#FAF9F6]/[0.03] px-4 py-4">

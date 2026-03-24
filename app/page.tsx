@@ -1,7 +1,24 @@
 import { Phone, Shield, Shovel, TreeDeciduous } from "lucide-react";
+import { cookies } from "next/headers";
 import { StumpCalculator } from "@/components/stump-calculator";
+import { getOrCreateDraftJob } from "@/lib/job";
+import { prisma } from "@/lib/prisma";
+import { getSessionById, isSessionValid, SESSION_COOKIE } from "@/lib/session";
 
-export default function Home() {
+async function getDraftJob() {
+	const cookieStore = await cookies();
+	const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+	if (!sessionId) return null;
+
+	const session = await getSessionById(prisma, sessionId);
+	if (!session || !isSessionValid(session)) return null;
+
+	return getOrCreateDraftJob(prisma, session.userId);
+}
+
+export default async function Home() {
+	const job = await getDraftJob();
+
 	return (
 		<div className="flex flex-1 flex-col">
 			{/* Header */}
@@ -51,7 +68,26 @@ export default function Home() {
 					</div>
 
 					{/* Calculator */}
-					<StumpCalculator />
+					{job ? (
+						<StumpCalculator
+							jobId={job.id}
+							initialLineItems={job.lineItems.map((li) => ({
+								id: li.id,
+								description: li.description,
+								quantity: li.quantity,
+								unitPrice: li.unitPrice,
+								amount: li.amount,
+								sortOrder: li.sortOrder,
+							}))}
+							initialStatus={job.status}
+						/>
+					) : (
+						<StumpCalculator
+							jobId={null}
+							initialLineItems={[]}
+							initialStatus="draft"
+						/>
+					)}
 				</div>
 			</section>
 

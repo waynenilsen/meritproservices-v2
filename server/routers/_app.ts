@@ -1,20 +1,8 @@
-import { prisma } from "@/lib/prisma";
-import { publicProcedure, router } from "../trpc";
+import { router } from "../trpc";
+import { jobRouter } from "./job";
 
 export const appRouter = router({
-	hello: publicProcedure.query(() => {
-		return {
-			greeting: "Hello from tRPC!",
-			serverTime: new Date(),
-		};
-	}),
-	projects: router({
-		list: publicProcedure.query(() => {
-			return prisma.project.findMany({
-				orderBy: { createdAt: "desc" },
-			});
-		}),
-	}),
+	job: jobRouter,
 });
 
 export type AppRouter = typeof appRouter;
